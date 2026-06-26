@@ -1,16 +1,12 @@
-# Data files
-data/raw/*.csv
-data/raw/*.xlsx
-
 # Python
 __pycache__/
 *.pyc
 .env
-*.egg-info/
-
-# Jupyter
-.ipynb_checkpoints/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Credentials
+*.json
+service_account*.json
