@@ -4,6 +4,7 @@
     {
       "parameters": {
         "public": true,
+        "mode": "webhook",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
@@ -63,8 +64,8 @@
       "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
       "typeVersion": 1.1,
       "position": [
-        216,
-        -8
+        224,
+        -16
       ],
       "id": "47acb091-5b8f-488d-b031-52aad9541ac3",
       "name": "Default Data Loader"
@@ -286,7 +287,7 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "714e6222-59cb-445c-822f-437702ea35d5",
+  "versionId": "0b8b2027-a8bb-4f77-86d5-6fcd65cb52c0",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "56ae73fe1ec2581ba93caccaafa4f8ad4988776d40cc943fa162adc8a78f35c6"
