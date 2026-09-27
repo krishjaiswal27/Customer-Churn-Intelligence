@@ -8,5 +8,7 @@ __pycache__/
 Thumbs.db
 
 # Credentials
-*.json
 service_account*.json
+credentials.json
+*apikey*.json
+*secret*.json
