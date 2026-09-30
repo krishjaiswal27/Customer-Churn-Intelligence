@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Churn Intelligence: who leaves a telecom subscription, and why</title>
+  <meta name="description" content="An end-to-end churn analysis of 7,032 telecom customers: SQL and PySpark features, an XGBoost model explained with SHAP, a Power BI report and a RAG chatbot.">
+  <meta name="theme-color" content="#ffffff">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Churn Intelligence">
+  <meta property="og:description" content="Month-to-month customers leave at fifteen times the rate of two-year customers. An end-to-end analysis of 7,032 telecom customers: SQL, PySpark, XGBoost with SHAP, Power BI and a RAG chatbot.">
+  <meta property="og:site_name" content="Churn Intelligence">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23fff'/%3E%3Crect x='1' y='1' width='6' height='6' fill='%23c8261b'/%3E%3Crect x='9' y='1' width='6' height='6'/%3E%3Crect x='1' y='9' width='6' height='6'/%3E%3Crect x='9' y='9' width='6' height='6'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Non-blocking: the metric-matched fallback in tokens.css keeps the swap from shifting layout. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;family=Host+Grotesk:wght@300..600&amp;display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;family=Host+Grotesk:wght@300..600&amp;display=swap"></noscript>
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/sections.css">
+  <link rel="preload" href="data/site_data.json" as="fetch" type="application/json" crossorigin>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" defer></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="nav" id="top">
+    <div class="nav__inner wrap grid">
+      <a class="nav__mark" href="#top" aria-label="churn intelligence, back to top">churn intelligence</a>
+      <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="nav-links">menu</button>
+      <nav class="nav__links" id="nav-links" aria-label="Sections">
+        <ul>
+          <li><a href="#pipeline">pipeline</a></li>
+          <li><a href="#findings">findings</a></li>
+          <li><a href="#model">model</a></li>
+          <li><a href="#dashboard">dashboard</a></li>
+          <li><a href="#explorer">explorer</a></li>
+          <li><a href="#ask">ask the data</a></li>
+          <li class="nav__repo-mobile"><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence" rel="noopener">repository ↗</a></li>
+        </ul>
+      </nav>
+      <a class="nav__repo" href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence" rel="noopener">repository ↗</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="spine" aria-hidden="true">
+      <p class="spine__cap">actual outcome, ordered by the model's predicted risk<span class="spine__key"><span class="spine__key-left">×</span> left <span class="spine__key-stayed">·</span> stayed</span></p>
+      <div class="spine__body">
+        <pre class="spine__layer spine__layer--stayed"></pre>
+        <pre class="spine__layer spine__layer--left"></pre>
+      </div>
+    </div>
+
+    <!-- hero -->
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <h1 class="hero__title" id="hero-title"><span class="nowrap">month-to-month</span> customers leave at fifteen times the rate of <span class="nowrap">two-year</span> customers. this project identifies who is likely to leave, and explains why.</h1>
+
+      <div class="hero__body grid">
+        <div class="hero__intro">
+          <p class="hero__sub">An analysis of <span class="num" data-bind="kpi:customers">7,032</span> telecom customers, from a spreadsheet audit through SQL and PySpark, an XGBoost model explained with SHAP, a Power BI report and a chatbot that answers questions about the findings.</p>
+          <div class="hero__actions">
+            <a class="button button--solid" href="#findings">explore the findings</a>
+            <a class="button" href="#ask">ask the data</a>
+          </div>
+        </div>
+
+        <div class="fields" data-scale="1">
+          <figure class="field" data-churned="1655" data-customers="3875">
+            <figcaption class="field__label">
+              <span class="field__name">month-to-month</span>
+              <span class="field__rate num" data-bind="seg:contract:Month-to-month:rate">42.7%</span>
+              <span class="field__count num"><span data-bind="seg:contract:Month-to-month:churned">1,655</span> of <span data-bind="seg:contract:Month-to-month:customers">3,875</span> left</span>
+            </figcaption>
+            <canvas class="field__canvas" role="img" aria-label="Month-to-month contracts: 1,655 of 3,875 customers left, 42.7%."></canvas>
+          </figure>
+          <figure class="field" data-churned="166" data-customers="1472">
+            <figcaption class="field__label">
+              <span class="field__name">one year</span>
+              <span class="field__rate num" data-bind="seg:contract:One year:rate">11.3%</span>
+              <span class="field__count num"><span data-bind="seg:contract:One year:churned">166</span> of <span data-bind="seg:contract:One year:customers">1,472</span> left</span>
+            </figcaption>
+            <canvas class="field__canvas" role="img" aria-label="One-year contracts: 166 of 1,472 customers left, 11.3%."></canvas>
+          </figure>
+          <figure class="field" data-churned="48" data-customers="1685">
+            <figcaption class="field__label">
+              <span class="field__name">two year</span>
+              <span class="field__rate num" data-bind="seg:contract:Two year:rate">2.8%</span>
+              <span class="field__count num"><span data-bind="seg:contract:Two year:churned">48</span> of <span data-bind="seg:contract:Two year:customers">1,685</span> left</span>
+            </figcaption>
+            <canvas class="field__canvas" role="img" aria-label="Two-year contracts: 48 of 1,685 customers left, 2.8%."></canvas>
+          </figure>
+          <p class="fields__key">
+            <span class="key key--left" aria-hidden="true"></span> left
+            <span class="key key--stayed" aria-hidden="true"></span> stayed
+            <span class="fields__scale">1 mark = 1 customer</span>
+          </p>
+          <p class="fields__source">Source: IBM Telco Customer Churn sample, <span class="num" data-bind="kpi:customers">7,032</span> customers after cleaning.</p>
+        </div>
+      </div>
+      <script src="js/field.js"></script>
+    </section>
+
+    <!-- the question -->
+    <section class="section wrap" id="question" aria-labelledby="question-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="question-title">the question</h2>
+          <p>What the business needs to know.</p>
+        </div>
+      </header>
+      <div class="grid">
+        <p class="statement span-3">More than one in four customers left: <span class="num" data-bind="kpi:churned">1,869</span> of <span class="num" data-bind="kpi:customers">7,032</span>, taking about <span class="num" data-bind="kpi:mrr_lost">$139K</span> of monthly recurring revenue with them.</p>
+        <p class="prose question__body">The business needs three answers: which current customers are likely to leave next, what drives that risk, and what would keep them. This project answers each one. The overall churn rate is <span class="num" data-bind="kpi:churn_rate">26.6%</span>, and every number on this page comes from the same cleaned dataset.</p>
+      </div>
+    </section>
+
+    <!-- pipeline -->
+    <section class="section wrap" id="pipeline" aria-labelledby="pipeline-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="pipeline-title">pipeline</h2>
+          <p>Six phases, each building on the last.</p>
+        </div>
+        <p class="row-head__meta row-head__colhead">tools</p>
+        <p class="row-head__meta row-head__colhead">what it produced</p>
+      </header>
+      <ol class="phases">
+        <li class="phase grid">
+          <h3 class="phase__name"><span class="phase__n num">1</span>Excel audit</h3>
+          <p class="phase__tools">Excel, pivot tables</p>
+          <p class="phase__out">Churn by contract, tenure and payment method. Found <code>TotalCharges</code> stored as text, with 11 blanks.</p>
+          <a class="phase__link" href="#hood" data-open-tab="tab-excel">read the audit note</a>
+        </li>
+        <li class="phase grid">
+          <h3 class="phase__name"><span class="phase__n num">2</span>PostgreSQL features</h3>
+          <p class="phase__tools">PostgreSQL, CASE WHEN, a CTE, window functions</p>
+          <p class="phase__out">A <code>features</code> table (tenure bucket, spend tier, churn flag) and an enriched table with each customer's price rank within their contract.</p>
+          <a class="phase__link" href="#hood" data-open-tab="tab-sql">see the SQL</a>
+        </li>
+        <li class="phase grid">
+          <h3 class="phase__name"><span class="phase__n num">3</span>PySpark replication</h3>
+          <p class="phase__tools">PySpark DataFrames, Window, Parquet</p>
+          <p class="phase__out">The same features rebuilt for distributed scale and checked against SQL: <span class="num" data-bind="kpi:customers">7,032</span> rows and a <span class="num" data-bind="kpi:m2m_avg_monthly_charge">$66.40</span> month-to-month average in both.</p>
+          <a class="phase__link" href="#hood" data-open-tab="tab-pyspark">compare SQL and PySpark</a>
+        </li>
+        <li class="phase grid">
+          <h3 class="phase__name"><span class="phase__n num">4</span>XGBoost model and SHAP</h3>
+          <p class="phase__tools">XGBoost, scikit-learn, SHAP</p>
+          <p class="phase__out">A classifier tested on 1,407 held-out customers (ROC-AUC 0.824), with SHAP showing what drives each prediction.</p>
+          <a class="phase__link" href="#model">see the model</a>
+        </li>
+        <li class="phase grid">
+          <h3 class="phase__name"><span class="phase__n num">5</span>Power BI report</h3>
+          <p class="phase__tools">Power BI Desktop, DAX</p>
+          <p class="phase__out">Three report pages and a DAX risk label: High above 0.70, Medium 0.40 to 0.70, Low below 0.40.</p>
+          <a class="phase__link" href="#dashboard">see the dashboard</a>
+        </li>
+        <li class="phase grid">
+          <h3 class="phase__name"><span class="phase__n num">6</span>RAG chatbot</h3>
+          <p class="phase__tools">n8n on Docker, Google Gemini, Pinecone</p>
+          <p class="phase__out">An agent that answers questions from the project's findings and remembers the conversation for follow-ups.</p>
+          <a class="phase__link" href="#ask">see the chatbot</a>
+        </li>
+      </ol>
+    </section>
+
+    <!-- findings -->
+    <section class="section wrap" id="findings" aria-labelledby="findings-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="findings-title">findings</h2>
+          <p>Churn rate by customer segment.</p>
+        </div>
+        <p class="row-head__meta">pandas, Chart.js</p>
+        <p class="row-head__meta"><span class="num" data-bind="kpi:customers">7,032</span> customers</p>
+        <a class="row-head__link" href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/sql/churn_analysis.sql" rel="noopener">sql/churn_analysis.sql ↗</a>
+      </header>
+
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Segment">
+          <button class="tab" role="tab" id="seg-contract" aria-controls="seg-panel" aria-selected="true" data-seg="contract">contract</button>
+          <button class="tab" role="tab" id="seg-tenure" aria-controls="seg-panel" aria-selected="false" tabindex="-1" data-seg="tenure">tenure</button>
+          <button class="tab" role="tab" id="seg-payment" aria-controls="seg-panel" aria-selected="false" tabindex="-1" data-seg="payment">payment method</button>
+          <button class="tab" role="tab" id="seg-spend" aria-controls="seg-panel" aria-selected="false" tabindex="-1" data-seg="spend">spend tier</button>
+          <button class="tab" role="tab" id="seg-internet" aria-controls="seg-panel" aria-selected="false" tabindex="-1" data-seg="internet">internet service</button>
+        </div>
+
+        <div class="findings grid" role="tabpanel" id="seg-panel" aria-labelledby="seg-contract" tabindex="0">
+          <div class="findings__side">
+            <p class="insight" id="seg-insight" aria-live="polite">Month-to-month customers churn at 42.7%, fifteen times the two-year rate of 2.8%.</p>
+            <p class="findings__note" id="seg-note">Share of each group that left. The highest-rate group is in red.</p>
+          </div>
+          <div class="findings__chart">
+            <div class="chart-box">
+              <canvas id="seg-chart" role="img" aria-label="Bar chart of churn rate by contract."></canvas>
+            </div>
+            <button class="table-toggle" type="button" aria-expanded="false" aria-controls="seg-table">view data table</button>
+            <div class="data-table" id="seg-table" hidden>
+              <table>
+                <caption class="visually-hidden" id="seg-table-cap">Churn by contract</caption>
+                <thead><tr><th scope="col">segment</th><th scope="col" class="r">customers</th><th scope="col" class="r">churned</th><th scope="col" class="r">churn rate</th></tr></thead>
+                <tbody id="seg-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- under the hood -->
+    <section class="section wrap" id="hood" aria-labelledby="hood-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="hood-title">under the hood</h2>
+          <p>The SQL, the PySpark port, and the audit that started it.</p>
+        </div>
+        <p class="row-head__meta">phases 1 to 3</p>
+      </header>
+
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Pipeline detail">
+          <button class="tab" role="tab" id="tab-sql" aria-controls="panel-sql" aria-selected="true">SQL</button>
+          <button class="tab" role="tab" id="tab-pyspark" aria-controls="panel-pyspark" aria-selected="false" tabindex="-1">PySpark</button>
+          <button class="tab" role="tab" id="tab-excel" aria-controls="panel-excel" aria-selected="false" tabindex="-1">Excel audit</button>
+        </div>
+
+        <div class="panel grid" role="tabpanel" id="panel-sql" aria-labelledby="tab-sql" tabindex="0">
+          <div class="panel__text">
+            <h3 class="h3">A CTE with two window functions</h3>
+            <p class="prose">Inside the CTE, <code>AVG() OVER (PARTITION BY contract)</code> gives every customer their contract's average monthly charge, and <code>RANK()</code> orders customers by price within their contract. The outer query then measures how far each customer sits above or below that average.</p>
+            <p class="prose">The features it builds on come from <code>CASE WHEN</code> rules in <code>feature_engineering.sql</code>, shown second.</p>
+          </div>
+          <div class="panel__code">
+            <figure class="code">
+              <figcaption><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/sql/advanced_features.sql" rel="noopener">sql/advanced_features.sql ↗</a></figcaption>
+<pre tabindex="0"><code data-lang="sql">-- Advanced feature engineering using a CTE and window functions
+CREATE TABLE features_enriched AS
+WITH contract_stats AS (
+    SELECT
+        customer_id,
+        contract,
+        tenure,
+        monthly_charges,
+        churn_value,
+        ROUND(AVG(monthly_charges) OVER (PARTITION BY contract), 2) AS avg_charges_by_contract,
+        RANK() OVER (PARTITION BY contract ORDER BY monthly_charges DESC) AS charge_rank_in_contract
+    FROM features
+)
+SELECT
+    *,
+    ROUND(monthly_charges - avg_charges_by_contract, 2) AS charge_vs_contract_avg
+FROM contract_stats;</code></pre>
+            </figure>
+            <figure class="code">
+              <figcaption><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/sql/feature_engineering.sql" rel="noopener">sql/feature_engineering.sql ↗</a> (excerpt)</figcaption>
+<pre tabindex="0"><code data-lang="sql">NULLIF(TRIM(total_charges), '')::NUMERIC AS total_charges,
+
+CASE
+    WHEN tenure &lt;= 12 THEN '0-12m'
+    WHEN tenure &lt;= 24 THEN '12-24m'
+    ELSE '24m+'
+END AS tenure_bucket,
+
+CASE WHEN churn = 'Yes' THEN 1 ELSE 0 END AS churn_value,
+
+CASE
+    WHEN monthly_charges &lt; 35 THEN 'Low'
+    WHEN monthly_charges &lt; 65 THEN 'Medium'
+    ELSE 'High'
+END AS spend_tier</code></pre>
+            </figure>
+          </div>
+        </div>
+
+        <div class="panel grid" role="tabpanel" id="panel-pyspark" aria-labelledby="tab-pyspark" tabindex="0" hidden>
+          <div class="panel__text">
+            <h3 class="h3">Same logic, distributed</h3>
+            <p class="prose">PostgreSQL runs on one machine. The PySpark version rewrites the same features with DataFrames so they would run across a cluster, then saves them as Parquet.</p>
+            <p class="check">Both pipelines return <strong class="num" data-bind="kpi:customers">7,032</strong> rows after cleaning and the same <strong class="num" data-bind="kpi:m2m_avg_monthly_charge">$66.40</strong> average monthly charge for month-to-month customers.</p>
+            <table class="equiv">
+              <caption class="visually-hidden">SQL constructs and their PySpark equivalents</caption>
+              <thead><tr><th scope="col">SQL</th><th scope="col">PySpark</th></tr></thead>
+              <tbody>
+                <tr><td><code>CASE WHEN</code></td><td><code>when().otherwise()</code></td></tr>
+                <tr><td><code>WHERE</code></td><td><code>.filter()</code></td></tr>
+                <tr><td><code>PARTITION BY … OVER</code></td><td><code>Window.partitionBy().over()</code></td></tr>
+                <tr><td><code>SELECT … AS</code></td><td><code>.withColumn()</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="panel__code">
+            <figure class="code">
+              <figcaption><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/notebooks/pyspark_features.ipynb" rel="noopener">notebooks/pyspark_features.ipynb ↗</a> (excerpt)</figcaption>
+<pre tabindex="0"><code data-lang="python">df = df.withColumn("TotalCharges", expr("try_cast(trim(TotalCharges) AS DOUBLE)"))
+df = df.filter(col("TotalCharges").isNotNull())
+df = df.withColumn("churn_value", when(col("Churn") == "Yes", 1).otherwise(0))
+
+df = df.withColumn("tenure_bucket",
+    when(col("tenure") &lt;= 12, "0-12m")
+    .when(col("tenure") &lt;= 24, "12-24m")
+    .otherwise("24m+")
+)
+
+# Define a window partitioned by Contract type
+contract_window = Window.partitionBy("Contract")
+
+# Calculate average monthly charges within each contract type
+df = df.withColumn(
+    "avg_charges_by_contract",
+    spark_round(avg("MonthlyCharges").over(contract_window), 2)
+)</code></pre>
+            </figure>
+          </div>
+        </div>
+
+        <div class="panel grid" role="tabpanel" id="panel-excel" aria-labelledby="tab-excel" tabindex="0" hidden>
+          <div class="panel__text">
+            <h3 class="h3"><code>TotalCharges</code> was text, with 11 blanks</h3>
+            <p class="prose">The first pass was pivot tables in Excel: churn by contract, tenure bucket and payment method. It also surfaced the dataset's one quality problem. <code>TotalCharges</code> was stored as text, and 11 rows were blank.</p>
+            <p class="prose">All 11 belonged to customers with zero tenure, who had not been billed yet. They were dropped, taking the dataset from 7,043 to <span class="num" data-bind="kpi:customers">7,032</span> customers. The SQL and PySpark steps apply the same rule.</p>
+            <p class="prose"><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/data/data_quality_log.xlsx" rel="noopener">data/data_quality_log.xlsx ↗</a></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- the model -->
+    <section class="section wrap" id="model" aria-labelledby="model-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="model-title">the model</h2>
+          <p>XGBoost, tested on 1,407 customers it never saw.</p>
+        </div>
+        <p class="row-head__meta">XGBoost, scikit-learn</p>
+        <p class="row-head__meta">phase 4</p>
+        <a class="row-head__link" href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/notebooks/ml_shap.ipynb" rel="noopener">notebooks/ml_shap.ipynb ↗</a>
+      </header>
+
+      <div class="grid">
+        <p class="statement span-3">The model catches 78% of the customers who go on to leave. About half of the customers it flags would have stayed, and that is a deliberate trade.</p>
+      </div>
+
+      <dl class="metrics grid">
+        <div class="metric"><dt>ROC-AUC</dt><dd class="metric__v num">0.824</dd><dd class="metric__d">Ranks a random leaver above a random stayer 82% of the time.</dd></div>
+        <div class="metric"><dt>recall</dt><dd class="metric__v num">0.78</dd><dd class="metric__d">Leavers caught: 291 of 374.</dd></div>
+        <div class="metric"><dt>precision</dt><dd class="metric__v num">0.50</dd><dd class="metric__d">Flagged customers who really left: 291 of 585.</dd></div>
+        <div class="metric"><dt>F1</dt><dd class="metric__v num">0.61</dd><dd class="metric__d">Balance of recall and precision for leavers. Accuracy overall is 0.73.</dd></div>
+      </dl>
+
+      <div class="model grid">
+        <figure class="cm" aria-labelledby="cm-cap">
+          <figcaption class="cm__cap" id="cm-cap">Confusion matrix, test set of 1,407 customers</figcaption>
+          <div class="cm__grid" role="table" aria-label="Confusion matrix: actual outcome by predicted outcome">
+            <div role="rowgroup">
+              <div class="cm__row cm__row--head" role="row">
+                <span class="cm__corner" role="columnheader"><span class="visually-hidden">actual</span></span>
+                <span class="cm__colhead" role="columnheader">predicted to stay</span>
+                <span class="cm__colhead" role="columnheader">predicted to leave</span>
+              </div>
+            </div>
+            <div role="rowgroup">
+              <div class="cm__row" role="row">
+                <span class="cm__rowhead" role="rowheader">actually stayed</span>
+                <span class="cm__cell cm__cell--right" role="cell"><span class="cm__n num">739</span><span class="cm__l">correctly left alone</span></span>
+                <span class="cm__cell cm__cell--wrong" role="cell"><span class="cm__n num">294</span><span class="cm__l">false alarms</span></span>
+              </div>
+              <div class="cm__row" role="row">
+                <span class="cm__rowhead" role="rowheader">actually left</span>
+                <span class="cm__cell cm__cell--wrong" role="cell"><span class="cm__n num">83</span><span class="cm__l">missed</span></span>
+                <span class="cm__cell cm__cell--right" role="cell"><span class="cm__n num">291</span><span class="cm__l">caught</span></span>
+              </div>
+            </div>
+          </div>
+        </figure>
+
+        <figure class="plate plate--light roc">
+          <button class="zoom" type="button" data-lightbox="assets/ml/roc_curve.webp" data-alt="ROC curve for the XGBoost model on the test set, bowing well above the diagonal toward the top left, labelled AUC 0.82.">
+            <img src="assets/ml/roc_curve.webp" width="671" height="649" loading="lazy" decoding="async" alt="ROC curve for the XGBoost model on the test set, bowing well above the diagonal toward the top left, labelled AUC 0.82.">
+            <span class="shot__hint">enlarge</span>
+          </button>
+          <figcaption>ROC curve on the test set. The more the curve bows toward the top left, the better the model separates leavers from stayers. A diagonal line would be guessing.</figcaption>
+        </figure>
+
+        <div class="model__text">
+          <h3 class="h3">Why precision is about 50%</h3>
+          <p class="prose">Training used <code>scale_pos_weight</code> of about 2.76, the ratio of stayers to leavers. That makes a missed leaver cost more than a false alarm, so the model flags generously. The trade is deliberate: a missed leaver takes their monthly revenue with them, while a false alarm costs one retention offer.</p>
+          <p class="prose">The decision threshold can be moved to fit a retention budget: fewer, surer flags, or wider coverage.</p>
+          <p class="model__params">200 trees, max depth 4, learning rate 0.1, 80/20 stratified split. The test set held 1,407 customers, 374 of whom left.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHAP -->
+    <section class="section wrap" id="drivers" aria-labelledby="drivers-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="drivers-title">what drives churn</h2>
+          <p>SHAP explanations of the model's predictions.</p>
+        </div>
+        <p class="row-head__meta">SHAP</p>
+        <p class="row-head__meta">phase 4</p>
+      </header>
+
+      <div class="drivers grid">
+        <div class="drivers__list">
+          <h3 class="h3">Top ten features, by average impact</h3>
+          <ol class="ranked">
+            <li><span class="ranked__n num">1</span>Contract<span class="ranked__why">month-to-month raises risk</span></li>
+            <li><span class="ranked__n num">2</span>tenure<span class="ranked__why">new customers are riskier</span></li>
+            <li><span class="ranked__n num">3</span>MonthlyCharges<span class="ranked__why">higher charges raise risk</span></li>
+            <li><span class="ranked__n num">4</span>TotalCharges</li>
+            <li><span class="ranked__n num">5</span>OnlineSecurity<span class="ranked__why">not having it raises risk</span></li>
+            <li><span class="ranked__n num">6</span>TechSupport<span class="ranked__why">not having it raises risk</span></li>
+            <li><span class="ranked__n num">7</span>PaymentMethod</li>
+            <li><span class="ranked__n num">8</span>MultipleLines</li>
+            <li><span class="ranked__n num">9</span>InternetService</li>
+            <li><span class="ranked__n num">10</span>StreamingTV</li>
+          </ol>
+        </div>
+        <div class="drivers__figs">
+          <figure class="plate plate--light">
+            <button class="zoom" type="button" data-lightbox="assets/ml/shap_summary.webp" data-alt="SHAP bar chart of mean absolute SHAP value per feature. Contract is longest, followed by tenure, MonthlyCharges, TotalCharges, OnlineSecurity and TechSupport; gender, DeviceProtection, Partner and PhoneService are near zero.">
+              <img src="assets/ml/shap_summary.webp" width="1185" height="1350" loading="lazy" decoding="async" alt="SHAP bar chart of mean absolute SHAP value per feature. Contract is longest, followed by tenure, MonthlyCharges, TotalCharges, OnlineSecurity and TechSupport; gender, DeviceProtection, Partner and PhoneService are near zero.">
+              <span class="shot__hint">enlarge</span>
+            </button>
+            <figcaption><strong>How to read this:</strong> each bar is a feature's average effect on the prediction, in either direction. Longer means more influence. It shows how much, not which way.</figcaption>
+          </figure>
+          <figure class="plate plate--light">
+            <button class="zoom" type="button" data-lightbox="assets/ml/shap_dot.webp" data-alt="SHAP beeswarm plot. Each dot is a customer. For Contract and tenure, low values in blue sit to the right, toward churn; for MonthlyCharges, high values in red sit to the right.">
+              <img src="assets/ml/shap_dot.webp" width="1154" height="1349" loading="lazy" decoding="async" alt="SHAP beeswarm plot. Each dot is a customer. For Contract and tenure, low values in blue sit to the right, toward churn; for MonthlyCharges, high values in red sit to the right.">
+              <span class="shot__hint">enlarge</span>
+            </button>
+            <figcaption><strong>How to read this:</strong> each dot is one customer. Dots right of the centre line pushed that prediction toward leaving; dots left pushed toward staying. Colour is the feature's value, red high and blue low. Low tenure sits right: new customers are likelier to leave.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- dashboard -->
+    <section class="section wrap" id="dashboard" aria-labelledby="dashboard-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="dashboard-title">the dashboard</h2>
+          <p>A three-page Power BI Desktop report.</p>
+        </div>
+        <p class="row-head__meta">Power BI Desktop, DAX</p>
+        <p class="row-head__meta">phase 5</p>
+        <p class="row-head__link">
+          <a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/raw/main/powerbi/Churn%20Intelligence.pbix" rel="noopener">.pbix file ↗</a>
+          <a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/powerbi/Churn_Intelligence_Dashboard.pdf" rel="noopener">PDF export ↗</a>
+        </p>
+      </header>
+
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Report page">
+          <button class="tab" role="tab" id="tab-exec" aria-controls="panel-exec" aria-selected="true">executive summary</button>
+          <button class="tab" role="tab" id="tab-segment" aria-controls="panel-segment" aria-selected="false" tabindex="-1">segment deep-dive</button>
+          <button class="tab" role="tab" id="tab-risk" aria-controls="panel-risk" aria-selected="false" tabindex="-1">customer risk scores</button>
+        </div>
+
+        <div class="shot grid" role="tabpanel" id="panel-exec" aria-labelledby="tab-exec" tabindex="0">
+          <p class="shot__cap"><strong>How big is the problem?</strong> Overall churn rate, customers lost, monthly revenue at risk, and churn by contract type.</p>
+          <button class="shot__btn plate plate--light" type="button" data-lightbox="assets/powerbi/executive_summary.webp" data-alt="Power BI executive summary page: churn rate 26.58%, 7.032K customers, 1.869K churned, 139.13K monthly revenue at risk, a churn donut and churn rate by contract with month-to-month highlighted in red.">
+            <img src="assets/powerbi/executive_summary.webp" width="1800" height="1013" loading="lazy" decoding="async" alt="Power BI executive summary page: churn rate 26.58%, 7.032K customers, 1.869K churned, 139.13K monthly revenue at risk, a churn donut and churn rate by contract with month-to-month highlighted in red.">
+            <span class="shot__hint">enlarge</span>
+          </button>
+        </div>
+        <div class="shot grid" role="tabpanel" id="panel-segment" aria-labelledby="tab-segment" tabindex="0" hidden>
+          <p class="shot__cap"><strong>Where is churn concentrated?</strong> Churn by tenure, payment method, spend tier and internet service, filtered by contract and tenure slicers.</p>
+          <button class="shot__btn plate plate--light" type="button" data-lightbox="assets/powerbi/segment_deep_dive.webp" data-alt="Power BI segment deep-dive page with churn rate by tenure, payment method, spend tier and internet service, and contract and tenure slicers.">
+            <img src="assets/powerbi/segment_deep_dive.webp" width="1800" height="1013" loading="lazy" decoding="async" alt="Power BI segment deep-dive page with churn rate by tenure, payment method, spend tier and internet service, and contract and tenure slicers.">
+            <span class="shot__hint">enlarge</span>
+          </button>
+        </div>
+        <div class="shot grid" role="tabpanel" id="panel-risk" aria-labelledby="tab-risk" tabindex="0" hidden>
+          <p class="shot__cap"><strong>Who should retention contact first?</strong> Risk KPIs, tenure against predicted probability, and the high-risk customer list with its DAX risk label.</p>
+          <button class="shot__btn plate plate--light" type="button" data-lightbox="assets/powerbi/customer_risk_scores.webp" data-alt="Power BI customer risk scores page: 1,704 high-risk customers, 38.70% average churn probability, a tenure versus probability scatter and a high-risk customer table.">
+            <img src="assets/powerbi/customer_risk_scores.webp" width="1800" height="1013" loading="lazy" decoding="async" alt="Power BI customer risk scores page: 1,704 high-risk customers, 38.70% average churn probability, a tenure versus probability scatter and a high-risk customer table.">
+            <span class="shot__hint">enlarge</span>
+          </button>
+        </div>
+      </div>
+      <p class="dash__note">These are screenshots of a Power BI Desktop report, not a live embed. Open the .pbix in Power BI Desktop to use the slicers, or read the PDF export.</p>
+    </section>
+
+    <!-- risk explorer -->
+    <section class="section wrap" id="explorer" aria-labelledby="explorer-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="explorer-title">risk explorer</h2>
+          <p>Every customer's predicted churn probability.</p>
+        </div>
+        <p class="row-head__meta"><span class="num" data-bind="kpi:customers">7,032</span> customers</p>
+        <p class="row-head__meta">highest risk first</p>
+        <a class="row-head__link" href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/data/telco_with_predictions.csv" rel="noopener">data/telco_with_predictions.csv ↗</a>
+      </header>
+
+      <p class="profile" id="profile">The 50 highest-risk customers are all on month-to-month contracts, most in their first month, paying about $78 to $101 a month, with predicted probabilities of 0.96 to 0.99.</p>
+
+      <div class="explorer">
+        <div class="controls">
+          <div class="control control--search">
+            <label for="ex-search">search by customer ID</label>
+            <input id="ex-search" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="for example 7216-EWTRS">
+          </div>
+          <fieldset class="control control--risk">
+            <legend>risk level</legend>
+            <div class="seg-radio">
+              <label><input type="radio" name="ex-risk" value="all" checked><span>all <span class="num" data-bind="kpi:customers">7,032</span></span></label>
+              <label><input type="radio" name="ex-risk" value="H"><span>high <span class="num" data-bind="risk:High">1,704</span></span></label>
+              <label><input type="radio" name="ex-risk" value="M"><span>medium <span class="num" data-bind="risk:Medium">1,497</span></span></label>
+              <label><input type="radio" name="ex-risk" value="L"><span>low <span class="num" data-bind="risk:Low">3,831</span></span></label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="table-scroll" tabindex="0" role="region" aria-labelledby="ex-caption">
+          <table class="ex-table">
+            <caption id="ex-caption" class="visually-hidden">Customers by predicted churn probability</caption>
+            <thead>
+              <tr>
+                <th scope="col" aria-sort="none"><button type="button" data-sort="id">customer ID</button></th>
+                <th scope="col" class="ex-prob-h" aria-sort="descending"><button type="button" data-sort="prob">churn probability</button></th>
+                <th scope="col" aria-sort="none"><button type="button" data-sort="risk">risk</button></th>
+                <th scope="col" aria-sort="none"><button type="button" data-sort="contract">contract</button></th>
+                <th scope="col" class="r" aria-sort="none"><button type="button" data-sort="tenure">tenure</button></th>
+                <th scope="col" class="r" aria-sort="none"><button type="button" data-sort="monthly">monthly charge</button></th>
+              </tr>
+            </thead>
+            <tbody id="ex-body">
+              <tr><td colspan="6" class="ex-empty">Loading customers…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <p class="pager__status num" id="ex-status" aria-live="polite"></p>
+          <div class="pager__buttons">
+            <button class="button" type="button" id="ex-prev">previous</button>
+            <button class="button" type="button" id="ex-next">next</button>
+          </div>
+        </div>
+        <p class="explorer__note">Tenure in months. Risk: High above 0.70, Medium 0.40 to 0.70, Low below 0.40. These scores cover the full dataset, including customers the model trained on, so they show the workflow rather than out-of-sample accuracy.</p>
+      </div>
+    </section>
+
+    <!-- recommendations -->
+    <section class="section wrap" id="recommendations" aria-labelledby="rec-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="rec-title">recommendations</h2>
+          <p>What the business should do, and the evidence for each.</p>
+        </div>
+        <p class="row-head__meta row-head__colhead">action</p>
+        <p class="row-head__meta row-head__colhead">evidence</p>
+      </header>
+      <ul class="recs">
+        <li class="rec grid">
+          <p class="rec__do">Aim retention offers at month-to-month customers in their first 12 months.</p>
+          <p class="rec__why">First-year customers churn at <span class="num" data-bind="seg:tenure:0-12m:rate">47.7%</span>, month-to-month customers at <span class="num" data-bind="seg:contract:Month-to-month:rate">42.7%</span>.</p>
+        </li>
+        <li class="rec grid">
+          <p class="rec__do">Move electronic-check payers to automatic payment.</p>
+          <p class="rec__why">Electronic check churns at <span class="num" data-bind="seg:payment:Electronic check:rate">45.3%</span>; automatic card payment at <span class="num" data-bind="seg:payment:Credit card (automatic):rate">15.3%</span>.</p>
+        </li>
+        <li class="rec grid">
+          <p class="rec__do">Bundle online security and tech support as retention tools.</p>
+          <p class="rec__why">Not having either pushes predictions toward churn; they rank fifth and sixth in the SHAP analysis.</p>
+        </li>
+        <li class="rec grid">
+          <p class="rec__do">Put retention budget behind high-spend customers.</p>
+          <p class="rec__why">Customers paying over $65 a month churn at <span class="num" data-bind="seg:spend:High:rate">34.7%</span>, against <span class="num" data-bind="seg:spend:Low:rate">10.9%</span> under $35, and they pay the most each month.</p>
+        </li>
+        <li class="rec grid">
+          <p class="rec__do">Offer discounted annual contracts to risky month-to-month customers.</p>
+          <p class="rec__why">One-year contracts churn at <span class="num" data-bind="seg:contract:One year:rate">11.3%</span>, two-year at <span class="num" data-bind="seg:contract:Two year:rate">2.8%</span>.</p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ask the data -->
+    <section class="section wrap" id="ask" aria-labelledby="ask-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="ask-title">ask the data</h2>
+          <p>A chatbot that answers questions about these findings.</p>
+        </div>
+        <p class="row-head__meta">n8n, Google Gemini, Pinecone</p>
+        <p class="row-head__meta">phase 6</p>
+        <a class="row-head__link" href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/rag/churn_rag_pipeline.json" rel="noopener">rag/churn_rag_pipeline.json ↗</a>
+      </header>
+
+      <div class="ask grid">
+        <div class="ask__left">
+        <div class="ask__main">
+          <!-- chat.js renders exactly one state here, from js/config.js:
+               the live widget, the demo video, or the offline card -->
+          <div class="chat-slot" id="chat-slot">
+            <noscript><p class="offline">The chatbot and its recorded demo need JavaScript.</p></noscript>
+          </div>
+        </div>
+        <div class="ask__side">
+          <h3 class="ask__h">try asking</h3>
+          <ul class="asks">
+            <li>Why do month-to-month customers churn?</li>
+            <li>Which payment method should we target for retention campaigns?</li>
+            <li>What does the highest-risk customer look like?</li>
+          </ul>
+          <p class="ask__note" id="chat-note"></p>
+        </div>
+        </div>
+        <figure class="workflow">
+          <button class="workflow__btn" type="button" data-lightbox="assets/n8n/workflow.webp" data-alt="n8n workflow: an ingestion path from Edit Fields through a Default Data Loader and Gemini embeddings into a Pinecone vector store, and a chat path where a chat trigger feeds an AI Agent connected to a Gemini chat model, Simple Memory and a Pinecone vector store tool.">
+            <img src="assets/n8n/workflow.webp" width="486" height="557" loading="lazy" decoding="async" alt="n8n workflow: an ingestion path from Edit Fields through a Default Data Loader and Gemini embeddings into a Pinecone vector store, and a chat path where a chat trigger feeds an AI Agent connected to a Gemini chat model, Simple Memory and a Pinecone vector store tool.">
+            <span class="shot__hint">enlarge</span>
+          </button>
+          <figcaption>The knowledge base (findings, model results, SHAP drivers, recommendations) is split into chunks, embedded with Gemini at 3,072 dimensions and stored in a Pinecone index. When a question arrives, an AI Agent decides whether to search that index, answers with Gemini, and keeps a short conversation memory so follow-ups work. API keys stay in n8n credentials, never in this website.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- tech stack -->
+    <section class="section wrap" id="stack" aria-labelledby="stack-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="stack-title">tech stack</h2>
+          <p>What each phase was built with.</p>
+        </div>
+      </header>
+      <div class="stack grid">
+        <div><h3 class="stack__h">data</h3><ul><li>Excel</li><li>PostgreSQL</li><li>PySpark</li><li>pandas</li><li>Parquet</li></ul></div>
+        <div><h3 class="stack__h">machine learning</h3><ul><li>XGBoost</li><li>scikit-learn</li><li>SHAP</li></ul></div>
+        <div><h3 class="stack__h">business intelligence</h3><ul><li>Power BI Desktop</li><li>DAX</li></ul></div>
+        <div><h3 class="stack__h">GenAI and automation</h3><ul><li>n8n, self-hosted on Docker</li><li>Google Gemini</li><li>Pinecone</li></ul></div>
+        <div><h3 class="stack__h">tooling</h3><ul><li>Jupyter on Google Colab</li><li>Git and GitHub</li><li>GitHub Pages</li><li>Chart.js</li></ul></div>
+      </div>
+    </section>
+
+    <!-- limitations -->
+    <section class="section wrap" id="limits" aria-labelledby="limits-title">
+      <header class="row-head grid">
+        <div class="row-head__title">
+          <h2 id="limits-title">limitations and notes</h2>
+          <p>What these results can and cannot claim.</p>
+        </div>
+      </header>
+      <ul class="limits grid">
+        <li>11 customers with a blank <code>TotalCharges</code> (zero tenure) were dropped, taking the data from 7,043 to <span class="num" data-bind="kpi:customers">7,032</span> customers.</li>
+        <li>The dataset is a public IBM sample. The findings illustrate the method; they do not describe a real company.</li>
+        <li>Model metrics (ROC-AUC 0.824, recall 0.78, precision 0.50) come from the held-out 20% test set. The risk scores in the dashboard and the explorer come from scoring the full dataset, including rows the model trained on, so they demonstrate the workflow rather than out-of-sample performance.</li>
+        <li>Precision of about 50% is a deliberate trade for higher recall. The decision threshold could be tuned to a retention budget.</li>
+        <li>The chatbot is self-hosted and only live when its host machine is running.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <div class="grid">
+      <p class="footer__mark">churn intelligence</p>
+      <ul class="footer__links">
+        <li><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence" rel="noopener">repository ↗</a></li>
+        <li><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/blob/main/powerbi/Churn_Intelligence_Dashboard.pdf" rel="noopener">dashboard PDF ↗</a></li>
+        <li><a href="https://github.com/krishjaiswal27/Customer-Churn-Intelligence/raw/main/powerbi/Churn%20Intelligence.pbix" rel="noopener">Power BI .pbix ↗</a></li>
+      </ul>
+      <p class="footer__credit">built by Krish Jaiswal. <a href="https://github.com/krishjaiswal27" rel="noopener">GitHub ↗</a> <a href="https://linkedin.com/in/krishjaiswal-890840294" rel="noopener">LinkedIn ↗</a></p>
+    </div>
+  </footer>
+
+  <dialog class="lightbox" id="lightbox" aria-label="Enlarged image">
+    <form method="dialog" class="lightbox__bar">
+      <button class="lightbox__close" type="submit">close</button>
+    </form>
+    <img class="lightbox__img" id="lightbox-img" alt="">
+  </dialog>
+</body>
+</html>

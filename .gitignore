@@ -1,7 +1,14 @@
+@"
 # Python
 __pycache__/
 *.pyc
 .env
+.env.*
+.venv/
+
+# Notebooks / Node tooling
+.ipynb_checkpoints/
+node_modules/
 
 # OS
 .DS_Store
@@ -12,3 +19,12 @@ service_account*.json
 credentials.json
 *apikey*.json
 *secret*.json
+
+# Claude Code files (instructions and local settings, not part of the project)
+.claude/
+CLAUDE.md
+BUILD_BRIEF.md
+
+# Design inspiration (not mine to publish)
+reference/
+"@ | Set-Content .gitignore

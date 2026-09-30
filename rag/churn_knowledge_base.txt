@@ -5,12 +5,13 @@ Total customers analyzed: 7,032
 Overall churn rate: 26.6%
 Total churned customers: 1,869
 Average customer monthly charge: $64.80
+Average predicted churn probability: 0.39
 
 CHURN BY CONTRACT TYPE
 Month-to-month contracts: 42.7% churn rate (3,875 customers, 1,655 churned)
-One year contracts: 11.3% churn rate (1,473 customers, 166 churned)
-Two year contracts: 2.8% churn rate (1,695 customers, 48 churned)
-Insight: Month-to-month customers churn at more than 15 times the rate of two-year contract customers. Contract length is the single strongest predictor of retention.
+One year contracts: 11.3% churn rate (1,472 customers, 166 churned)
+Two year contracts: 2.8% churn rate (1,685 customers, 48 churned)
+Insight: Month-to-month customers churn at roughly 15 times the rate of two-year contract customers. Contract length is the single strongest predictor of retention.
 
 CHURN BY TENURE
 Customers with 0-12 months tenure: 47.7% churn rate
@@ -22,7 +23,7 @@ CHURN BY PAYMENT METHOD
 Electronic check: 45.3% churn rate (highest risk)
 Mailed check: 19.1% churn rate
 Bank transfer (automatic): 16.7% churn rate
-Credit card (automatic): 15.2% churn rate
+Credit card (automatic): 15.3% churn rate
 Insight: Customers using electronic check have nearly 3x higher churn than those on automatic payment methods. Automatic payments correlate with lower churn, possibly due to reduced friction and commitment.
 
 CHURN BY SPEND TIER
@@ -36,23 +37,9 @@ Model used: XGBoost Classifier
 ROC-AUC Score: 0.824
 Recall for churners: 78% (correctly identifies most actual churners)
 Precision for churners: 50%
+Confusion matrix (test set, 1,407 customers): 739 correctly predicted retained, 294 false alarms, 83 missed churners, 291 correctly caught churners.
 
 SHAP FEATURE IMPORTANCE (TOP DRIVERS OF CHURN)
 1. Contract type - the single biggest driver of churn predictions
 2. Tenure - low tenure strongly increases churn risk
-3. Monthly Charges - higher charges increase churn risk
-4. Total Charges - correlated with tenure, adds additional signal
-5. Online Security - customers without online security churn more
-6. Tech Support - customers without tech support churn more
-7. Payment Method - electronic check increases churn risk
-8. Internet Service - fiber optic customers show different churn patterns than DSL
-
-HIGH RISK CUSTOMER PROFILE
-The highest risk customers share this profile: month-to-month contract, tenure under 12 months, monthly charges above $70, and electronic check payment method. Customers matching this profile show churn probabilities of 90-99%.
-
-BUSINESS RECOMMENDATIONS
-1. Prioritize retention offers for month-to-month customers in their first 12 months
-2. Incentivize customers to switch from electronic check to automatic payment methods
-3. Bundle online security and tech support services as retention tools, since their absence correlates with higher churn
-4. Focus retention budget on high-spend customers since they represent the largest revenue risk
-5. Consider offering discounted annual contracts to convert risky month-to-month customers
+3. Monthly Charges - higher

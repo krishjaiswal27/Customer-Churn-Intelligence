@@ -1,0 +1,70 @@
+/* Design tokens. Reasoning in DESIGN_NOTES.md. */
+
+/* Arial scaled to Host Grotesk's metrics (measured from the Google Fonts file:
+   average lowercase width and hhea ascent/descent), so text keeps its shape
+   when the web font swaps in and the page does not shift. */
+@font-face {
+  font-family: "Host Grotesk Fallback";
+  src: local("Arial"), local("ArialMT"), local("Helvetica Neue"), local("Helvetica");
+  size-adjust: 105.68%;
+  ascent-override: 96.05%;
+  descent-override: 29.81%;
+  line-gap-override: 0%;
+}
+
+:root {
+  /* colour */
+  --paper: #ffffff;
+  --ink: #000000;
+  --graphite: #5c5c5c;
+  --stone: #8a8a8a;
+  --fog: #f2f2f2;
+  --churn: #c8261b;
+
+  /* spine tints: sit behind content only, never under text */
+  --spine-stayed: #d9d9d9;
+  --spine-left: #ebaaa4;
+
+  --rule: #d6d6d6;
+
+  /* type */
+  --font-sans: "Host Grotesk", "Host Grotesk Fallback", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --fs-cap: 0.8125rem;   /* 13 */
+  --fs-ui: 0.9375rem;    /* 15 */
+  --fs-body: 1.0625rem;  /* 17 */
+  --fs-h3: 1.5rem;       /* 24 */
+  --fs-statement: clamp(2rem, 1.45rem + 1.5vw, 3rem);
+  --fs-figure: clamp(2rem, 1.6rem + 1.1vw, 2.75rem);
+  --fs-hero: clamp(2.25rem, 1rem + 4.6vw, 5.5rem);
+
+  --lh-cap: 1.35;
+  --lh-ui: 1.45;
+  --lh-body: 1.6;
+
+  /* layout */
+  --margin: 16px;
+  --gutter: 20px;
+  --cols: 1;
+  --section-space: 96px;
+  --nav-h: 56px;
+
+  /* motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --margin: 20px;
+    --cols: 2;
+    --section-space: 128px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --cols: 4;
+    --section-space: 160px;
+  }
+}
